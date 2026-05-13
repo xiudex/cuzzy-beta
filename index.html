@@ -968,7 +968,9 @@ function startCodeTimer() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// SEND VERIFICATION CODE (EmailJS + Firestore)
+// SEND VERIFICATION CODE (EmailJS + sessionStorage)
+// Firestore yerine sessionStorage kullanılıyor — Firestore izin
+// hatalarını ve ad-blocker engellemelerini bypass eder.
 // ════════════════════════════════════════════════════════════════
 async function sendVerificationCode(email, name) {
   const code = generateCode();
@@ -976,14 +978,6 @@ async function sendVerificationCode(email, name) {
 
   try {
     if (!pendingUser) throw new Error('No pending user');
-
-    // Eskiyi önce sil; var olan belge güncelleme kuralına takılır
-    // (kod değiştirilemiyor, attempts sıfırlanamıyor), bu yüzden silip yeniden oluşturuyoruz
-    await db.collection('verificationCodes').doc(pendingUser.uid).delete().catch(() => {});
-
-    await db.collection('verificationCodes').doc(pendingUser.uid).set({
-      code, expireTime, attempts: 0
-    });
 
     if (typeof emailjs === 'undefined') throw new Error('EmailJS not loaded');
 
@@ -994,7 +988,11 @@ async function sendVerificationCode(email, name) {
       verification_code: code
     });
     const ok = resp && (resp.status === 200 || String(resp.text || '').toUpperCase() === 'OK');
-    if (!ok) throw new Error('EmailJS unexpected response');
+    if (!ok) throw new Error('EmailJS response: ' + (resp?.status ?? 'unknown'));
+
+    // Kodu session'a kaydet (Firestore izin sorunlarını önler)
+    sessionStorage.setItem('pendingVerify_' + pendingUser.uid,
+      JSON.stringify({ code, expireTime, attempts: 0 }));
 
     codeExpireTime = expireTime;
     startCodeTimer();
@@ -1110,35 +1108,38 @@ async function verifyCode() {
 
   setFizzyState('verifyCodeBtn', 'loading');
 
+  const storageKey = 'pendingVerify_' + pendingUser.uid;
+
   try {
-    const doc = await db.collection('verificationCodes').doc(pendingUser.uid).get();
-    if (!doc.exists) {
+    const stored = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+
+    if (!stored) {
       setFizzyState('verifyCodeBtn', 'idle');
       return toast('Kod bulunamadı, tekrar gönderin', 'error');
     }
-    const d = doc.data();
-    if (Date.now() > d.expireTime) {
+    if (Date.now() > stored.expireTime) {
       setFizzyState('verifyCodeBtn', 'idle');
       return toast('Kodun süresi dolmuş', 'error');
     }
-    if (d.attempts >= 5) {
+    if (stored.attempts >= 5) {
       setFizzyState('verifyCodeBtn', 'idle');
       return toast('Çok fazla yanlış deneme', 'error');
     }
 
-    if (code === d.code) {
+    if (code === stored.code) {
+      sessionStorage.removeItem(storageKey);
       await db.collection('users').doc(pendingUser.uid).update({
         emailVerified: true, verifiedAt: Date.now()
       });
-      await db.collection('verificationCodes').doc(pendingUser.uid).delete();
       setFizzyState('verifyCodeBtn', 'success');
       toast('Doğrulandı! Yönlendiriliyor...', 'success');
       clearInterval(codeTimerInterval);
       setTimeout(() => { window.location.href = 'app.html'; }, 1200);
     } else {
+      stored.attempts++;
+      sessionStorage.setItem(storageKey, JSON.stringify(stored));
       setFizzyState('verifyCodeBtn', 'idle');
-      await db.collection('verificationCodes').doc(pendingUser.uid).update({ attempts: d.attempts + 1 });
-      toast(`Yanlış kod. ${Math.max(0, 4 - d.attempts)} hak kaldı.`, 'error');
+      toast(`Yanlış kod. ${Math.max(0, 4 - stored.attempts)} hak kaldı.`, 'error');
       clearCode();
     }
   } catch (e) {
