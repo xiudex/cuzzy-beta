@@ -700,24 +700,6 @@ body::after {
         </button>
       </div>
 
-      <div id="registerVerify" style="display:none">
-        <div style="text-align:center;font-size:2.2rem;margin-bottom:14px">📧</div>
-        <p style="color:var(--text-soft);font-size:0.88rem;margin-bottom:8px;line-height:1.6;text-align:center">
-          <strong style="color:var(--text)" id="verifyEmailText">—</strong><br>
-          adresine doğrulama linki gönderdik.<br>
-          E-postanı aç, <strong style="color:var(--accent)">linke tıkla</strong>,<br>
-          sonra aşağıdaki butona bas.
-        </p>
-        <p style="color:var(--text-muted);font-size:0.78rem;text-align:center;margin-bottom:12px">💡 Spam / önemsiz klasörünü de kontrol et.</p>
-        <button class="fizzy-btn" id="verifyCodeBtn" onclick="checkEmailVerified()">
-          <div class="btn-inner">
-            <span class="btn-text">✓ E-postamı Doğruladım</span>
-            <div class="btn-loading"><div class="spinner"></div><span>Kontrol ediliyor…</span></div>
-            <div class="tick-mark"><svg viewBox="0 0 52 52"><circle class="tick-circle" cx="26" cy="26" r="25"/><path class="tick-check" d="M14 27l7 7 16-16"/></svg></div>
-          </div>
-        </button>
-        <button class="link-btn" id="resendCodeBtn" onclick="resendCode()">Linki tekrar gönder</button>
-      </div>
     </div>
 
     <!-- FORGOT PASSWORD -->
@@ -807,7 +789,7 @@ function showLoadError(missing) {
 
 if (typeof firebase === 'undefined') showLoadError('Firebase');
 if (typeof firebase.firestore === 'undefined') showLoadError('Firebase Firestore');
-if (typeof emailjs === 'undefined') console.warn('EmailJS yüklenemedi — kod doğrulaması çalışmayabilir');
+
 
 // ════════════════════════════════════════════════════════════════
 // FIREBASE CONFIG
@@ -829,21 +811,10 @@ const db = firebase.firestore();
 auth.languageCode = 'tr';
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => console.warn(e));
 
-// EmailJS
-const _e = ['c2VydmljZV9pc2F1aHRs', 'dGVtcGxhdGVfeXZyZHptYQ==', 'LUtUZWFEUU5nOGVOelpqbjA='];
-const EMAILJS_CONFIG = {
-  serviceId: atob(_e[0]),
-  templateId: atob(_e[1]),
-  publicKey: atob(_e[2])
-};
-if (typeof emailjs !== 'undefined') emailjs.init(EMAILJS_CONFIG.publicKey);
-
 // ════════════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════════════
 let pendingUser = null;
-let codeExpireTime = 0;
-let codeTimerInterval = null;
 let currentTab = 'login';
 
 // ════════════════════════════════════════════════════════════════
@@ -891,8 +862,6 @@ function switchTab(tab) {
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'login'));
   } else if (tab === 'register') {
     document.getElementById('registerSection').classList.add('active');
-    document.getElementById('registerDetails').style.display = 'block';
-    document.getElementById('registerVerify').style.display = 'none';
     tabsEl.classList.add('show-register');
     document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'register'));
   } else if (tab === 'forgot') {
@@ -906,75 +875,6 @@ function switchTab(tab) {
     r.style.display = 'none';
     r.innerHTML = '';
     setFizzyState('forgotSendBtn', 'idle');
-  }
-}
-
-// ════════════════════════════════════════════════════════════════
-// CODE INPUT
-// ════════════════════════════════════════════════════════════════
-function codeInput(i) {
-  const el = document.getElementById('code' + i);
-  el.value = el.value.replace(/[^0-9]/g, '');
-  if (el.value && i < 6) document.getElementById('code' + (i+1)).focus();
-  if (getCode().length === 6) setTimeout(verifyCode, 300);
-}
-
-function codeKeydown(e, i) {
-  if (e.key === 'Backspace' && !e.target.value && i > 1) {
-    document.getElementById('code' + (i-1)).focus();
-  }
-}
-
-function getCode() {
-  let c = '';
-  for (let i = 1; i <= 6; i++) c += document.getElementById('code' + i).value;
-  return c;
-}
-
-function clearCode() {
-  for (let i = 1; i <= 6; i++) document.getElementById('code' + i).value = '';
-  document.getElementById('code1').focus();
-}
-
-function generateCode() {
-  const arr = new Uint32Array(1);
-  crypto.getRandomValues(arr);
-  return String(arr[0] % 900000 + 100000);
-}
-
-function startCodeTimer() {
-  clearInterval(codeTimerInterval);
-  const update = () => {
-    const rem = Math.max(0, Math.floor((codeExpireTime - Date.now()) / 1000));
-    const m = Math.floor(rem / 60);
-    const s = rem % 60;
-    const el = document.getElementById('codeTimer');
-    if (!el) return;
-    if (rem > 0) {
-      el.textContent = `Kod geçerlilik: ${m}:${s.toString().padStart(2,'0')}`;
-      el.style.color = rem < 60 ? 'var(--error)' : 'var(--text-muted)';
-    } else {
-      el.textContent = 'Kodun süresi doldu';
-      el.style.color = 'var(--error)';
-    }
-  };
-  update();
-  codeTimerInterval = setInterval(update, 1000);
-}
-
-// ════════════════════════════════════════════════════════════════
-// SEND VERIFICATION EMAIL (Firebase built-in)
-// EmailJS yerine Firebase Auth'un kendi e-posta sistemi kullanılır.
-// Şifre sıfırlama gibi Firebase altyapısıyla güvenilir çalışır.
-// ════════════════════════════════════════════════════════════════
-async function sendVerificationCode(email, name) {
-  try {
-    if (!pendingUser) throw new Error('No pending user');
-    await pendingUser.sendEmailVerification();
-    return true;
-  } catch (e) {
-    console.error('sendVerificationCode err:', e);
-    return false;
   }
 }
 
@@ -998,7 +898,7 @@ async function handleRegister() {
     await db.collection('users').doc(userCred.user.uid).set({
       profile: { name },
       email,
-      emailVerified: false,
+      emailVerified: true,
       createdAt: Date.now(),
       transactions: [], recurring: [], goals: [], investments: [],
       debts: [], subscriptions: [], notes: [], uploads: [], watchlist: [],
@@ -1009,58 +909,17 @@ async function handleRegister() {
       tourCompleted: false
     });
 
-    pendingUser = userCred.user;
-    document.getElementById('verifyEmailText').textContent = email;
-
-    const sent = await sendVerificationCode(email, name);
-
-    setFizzyState('registerContinueBtn', sent ? 'success' : 'idle');
-    if (sent) toast('Doğrulama linki gönderildi!', 'success');
-    else toast('E-posta gönderilemedi. "Linki tekrar gönder"e tıklayın.', 'error');
-
-    setTimeout(() => {
-      setFizzyState('registerContinueBtn', 'idle');
-      document.getElementById('registerDetails').style.display = 'none';
-      document.getElementById('registerVerify').style.display = 'block';
-      document.getElementById('code1').focus();
-    }, sent ? 800 : 200);
+    setFizzyState('registerContinueBtn', 'success');
+    toast('Hesap oluşturuldu! Yönlendiriliyor...', 'success');
+    setTimeout(() => { window.location.href = 'app.html'; }, 1200);
 
   } catch (err) {
     console.error('Register err:', err);
     setFizzyState('registerContinueBtn', 'idle');
 
     if (err.code === 'auth/email-already-in-use') {
-      // Kullanıcı mevcut — doğrulanmamış kayıt kalıntısı olabilir
-      // Şifreyi doğrulayıp emailVerified kontrolü yap
-      try {
-        const signInCred = await auth.signInWithEmailAndPassword(email, password);
-        const userDoc = await db.collection('users').doc(signInCred.user.uid).get();
-        const isUnverified = userDoc.exists && userDoc.data().emailVerified === false;
-
-        if (isUnverified) {
-          // Yarım kalmış kayıt — doğrulama ekranına al
-          pendingUser = signInCred.user;
-          document.getElementById('verifyEmailText').textContent = email;
-          const savedName = userDoc.data()?.profile?.name || name;
-          const sent = await sendVerificationCode(email, savedName);
-          if (sent) toast('Doğrulama linki yeniden gönderildi', 'success');
-          else toast('E-posta gönderilemedi. "Linki tekrar gönder"e tıklayın.', 'error');
-          document.getElementById('registerDetails').style.display = 'none';
-          document.getElementById('registerVerify').style.display = 'block';
-          document.getElementById('code1').focus();
-        } else {
-          // Hesap zaten aktif — girişe yönlendir
-          toast('Bu e-posta zaten kayıtlı. Giriş yapın.', 'error');
-          setTimeout(() => switchTab('login'), 1500);
-        }
-      } catch (signInErr) {
-        // Yanlış şifre veya başka hata
-        if (signInErr.code === 'auth/wrong-password' || signInErr.code === 'auth/invalid-credential') {
-          toast('Bu e-posta başka bir hesapta kullanılıyor', 'error');
-        } else {
-          toast('Bu e-posta zaten kullanımda', 'error');
-        }
-      }
+      toast('Bu e-posta zaten kayıtlı. Giriş yapın.', 'error');
+      setTimeout(() => switchTab('login'), 1500);
     } else if (err.code === 'auth/weak-password') {
       toast('Şifre çok zayıf', 'error');
     } else if (err.code === 'auth/invalid-email') {
@@ -1069,51 +928,6 @@ async function handleRegister() {
       toast('Kayıt hatası: ' + (err.message || err.code), 'error');
     }
   }
-}
-
-// ════════════════════════════════════════════════════════════════
-// CHECK EMAIL VERIFIED (Firebase Auth)
-// Kullanıcı e-postadaki linke tıkladıktan sonra Firebase Auth
-// durumunu yeniler; emailVerified = true ise Firestore'u günceller.
-// ════════════════════════════════════════════════════════════════
-async function checkEmailVerified() {
-  if (!pendingUser) return toast('Oturum bulunamadı', 'error');
-
-  setFizzyState('verifyCodeBtn', 'loading');
-
-  try {
-    // Firebase Auth token'ını yenile — emailVerified güncel durumu al
-    await pendingUser.reload();
-    const refreshed = auth.currentUser;
-
-    if (refreshed && refreshed.emailVerified) {
-      await db.collection('users').doc(pendingUser.uid).update({
-        emailVerified: true, verifiedAt: Date.now()
-      });
-      setFizzyState('verifyCodeBtn', 'success');
-      toast('Doğrulandı! Yönlendiriliyor...', 'success');
-      setTimeout(() => { window.location.href = 'app.html'; }, 1200);
-    } else {
-      setFizzyState('verifyCodeBtn', 'idle');
-      toast('E-posta henüz doğrulanmamış. Linke tıkladıktan sonra tekrar dene.', 'error');
-    }
-  } catch (e) {
-    console.error('checkEmailVerified err:', e);
-    setFizzyState('verifyCodeBtn', 'idle');
-    toast('Doğrulama hatası', 'error');
-  }
-}
-
-async function resendCode() {
-  if (!pendingUser) return;
-  const btn = document.getElementById('resendCodeBtn');
-  btn.disabled = true;
-  btn.textContent = 'Gönderiliyor...';
-  const ok = await sendVerificationCode(pendingUser.email, '');
-  btn.disabled = false;
-  btn.textContent = 'Linki tekrar gönder';
-  if (ok) toast('Yeni doğrulama linki gönderildi', 'success');
-  else toast('Gönderilemedi', 'error');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1128,25 +942,10 @@ async function handleLogin() {
   setFizzyState('loginBtn', 'loading');
 
   try {
-    const userCred = await auth.signInWithEmailAndPassword(email, password);
-    const userDoc = await db.collection('users').doc(userCred.user.uid).get();
-
-    if (userDoc.exists && userDoc.data().emailVerified) {
-      setFizzyState('loginBtn', 'success');
-      toast('Giriş başarılı! Yönlendiriliyor...', 'success');
-      setTimeout(() => { window.location.href = 'app.html'; }, 1200);
-    } else {
-      // Email doğrulanmamış — register verify ekranına geç
-      pendingUser = userCred.user;
-      const name = userDoc.exists ? (userDoc.data().profile?.name || 'Kullanıcı') : 'Kullanıcı';
-      setFizzyState('loginBtn', 'idle');
-      toast('E-posta doğrulaması gerekli', 'error');
-      switchTab('register');
-      document.getElementById('registerDetails').style.display = 'none';
-      document.getElementById('registerVerify').style.display = 'block';
-      document.getElementById('verifyEmailText').textContent = email;
-      await sendVerificationCode(email, name);
-    }
+    await auth.signInWithEmailAndPassword(email, password);
+    setFizzyState('loginBtn', 'success');
+    toast('Giriş başarılı! Yönlendiriliyor...', 'success');
+    setTimeout(() => { window.location.href = 'app.html'; }, 1200);
   } catch (err) {
     console.error('Login err:', err);
     setFizzyState('loginBtn', 'idle');
@@ -1236,8 +1035,7 @@ auth.onAuthStateChanged(async (user) => {
   if (user) {
     try {
       const userDoc = await db.collection('users').doc(user.uid).get();
-      if (userDoc.exists && userDoc.data().emailVerified) {
-        // Zaten giriş yapmış ve doğrulanmış — direkt app'e
+      if (userDoc.exists) {
         clearTimeout(splashHideTimer);
         window.location.href = 'app.html';
         return;
@@ -1246,7 +1044,6 @@ auth.onAuthStateChanged(async (user) => {
       console.warn('Auto-redirect check err:', e);
     }
   }
-  // Splash'i gizle
   clearTimeout(splashHideTimer);
   setTimeout(() => document.getElementById('splash').classList.add('hidden'), 200);
 });
