@@ -712,6 +712,15 @@ aside.right-panel { position: sticky; top: 100px; height: fit-content; max-heigh
 .section-card p { font-size: 0.8rem; color: var(--text-soft); line-height: 1.5; }
 .section-stat { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 700; color: var(--text); }
 .eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+
+/* ═════ PIN NOTICE OVERLAY ═════ */
+.pin-notice-overlay { position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;background:rgba(5,8,22,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:20px;transition:opacity 0.3s; }
+.pin-notice-overlay.hidden { opacity:0;pointer-events:none;visibility:hidden; }
+.pin-notice-card { background:var(--glass-strong,rgba(255,255,255,0.08));border:1px solid rgba(251,191,36,0.35);border-radius:22px;padding:30px 26px;max-width:420px;width:100%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.5); }
+.pin-notice-icon { font-size:2.4rem;margin-bottom:12px; }
+.pin-notice-title { font-size:1.05rem;font-weight:700;color:var(--text,#f0f4ff);margin-bottom:12px; }
+.pin-notice-body { font-size:0.85rem;color:var(--text-soft,#a5b0c8);line-height:1.7;margin-bottom:22px; }
+.pin-notice-body strong { color:#fbbf24; }
 </style>
 </head>
 <body>
@@ -1320,6 +1329,7 @@ aside.right-panel { position: sticky; top: 100px; height: fit-content; max-heigh
                   <button class="btn btn-primary btn-sm" onclick="savePin()">Kaydet</button>
                   <button class="btn btn-danger btn-sm" onclick="removePin()">Kaldır</button>
                 </div>
+                <p style="font-size:0.78rem;color:#fbbf24;margin-top:6px;line-height:1.55">&#9888;&#65039; PIN sıfırlama sistemi geçici olarak devre dışıdır. PIN ayarlarsanız ve unutursanız hesabınıza giremeyebilirsiniz.</p>
               </div>
             </div>
             <div class="card">
@@ -2156,6 +2166,7 @@ function enterApp() {
   if (!S.tourCompleted) {
     setTimeout(startTour, 800);
   }
+  setTimeout(showPinNoticeIfNeeded, 600);
 }
 
 function startListening(uid) {
@@ -5230,6 +5241,38 @@ window.addEventListener('beforeunload', () => {
   clearMarketIntervals();
 });
 
+function showPinNoticeIfNeeded() {
+  if (!localStorage.getItem('cuzzy_pin_notice_v2')) {
+    document.getElementById('pinNoticeOverlay').classList.remove('hidden');
+  }
+}
+
+function dismissPinNotice() {
+  if (document.getElementById('pinNoticeDontShow').checked) {
+    localStorage.setItem('cuzzy_pin_notice_v2', '1');
+  }
+  document.getElementById('pinNoticeOverlay').classList.add('hidden');
+}
+
 </script>
+
+<!-- PIN NOTICE -->
+<div class="pin-notice-overlay hidden" id="pinNoticeOverlay">
+  <div class="pin-notice-card">
+    <div class="pin-notice-icon">⚠️</div>
+    <div class="pin-notice-title">Geçici Bilgilendirme</div>
+    <div class="pin-notice-body">
+      <strong>6 haneli PIN şu an için kullanılamaz.</strong><br><br>
+      PIN’i unuttuğunuzda devreye giren <em>şifre sıfırlama</em> sistemi geçici olarak devre dışıdır. Bu yüzden PIN ayarlamanız halinde kilitlenen hesabınıza tekrar giremeyebilirsiniz.<br><br>
+      Sistem aktif hale geldiğinde sizi bilgilendireceğiz.
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:0.8rem;color:var(--text-soft);margin-bottom:16px;cursor:pointer;justify-content:center">
+      <input type="checkbox" id="pinNoticeDontShow" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer">
+      Tekrar gösterme
+    </label>
+    <button class="btn btn-primary" onclick="dismissPinNotice()">Anladım</button>
+  </div>
+</div>
+
 </body>
 </html>
