@@ -1036,26 +1036,63 @@ async function handleRegister() {
     document.getElementById('verifyEmailText').textContent = email;
 
     const sent = await sendVerificationCode(email, name);
-    if (sent) {
-      setFizzyState('registerContinueBtn', 'success');
-      toast('Kod gönderildi!', 'success');
-      setTimeout(() => {
-        setFizzyState('registerContinueBtn', 'idle');
-        document.getElementById('registerDetails').style.display = 'none';
-        document.getElementById('registerVerify').style.display = 'block';
-        document.getElementById('code1').focus();
-      }, 800);
-    } else {
+
+    // Kod Firestore'da mevcut — EmailJS başarısız olsa bile doğrulama
+    // ekranını göster, kullanıcı "tekrar gönder" butonunu kullanabilir
+    setFizzyState('registerContinueBtn', sent ? 'success' : 'idle');
+    if (sent) toast('Kod gönderildi!', 'success');
+    else toast('E-posta gönderilemedi. "Kodu tekrar gönder"e tıklayın.', 'error');
+
+    setTimeout(() => {
       setFizzyState('registerContinueBtn', 'idle');
-      toast('Kod gönderilemedi, tekrar deneyin', 'error');
-    }
+      document.getElementById('registerDetails').style.display = 'none';
+      document.getElementById('registerVerify').style.display = 'block';
+      document.getElementById('code1').focus();
+    }, sent ? 800 : 200);
+
   } catch (err) {
     console.error('Register err:', err);
     setFizzyState('registerContinueBtn', 'idle');
-    if (err.code === 'auth/email-already-in-use') toast('Bu e-posta zaten kullanımda', 'error');
-    else if (err.code === 'auth/weak-password') toast('Şifre çok zayıf', 'error');
-    else if (err.code === 'auth/invalid-email') toast('Geçersiz e-posta adresi', 'error');
-    else toast('Kayıt hatası: ' + (err.message || err.code), 'error');
+
+    if (err.code === 'auth/email-already-in-use') {
+      // Kullanıcı mevcut — doğrulanmamış kayıt kalıntısı olabilir
+      // Şifreyi doğrulayıp emailVerified kontrolü yap
+      try {
+        const signInCred = await auth.signInWithEmailAndPassword(email, password);
+        const userDoc = await db.collection('users').doc(signInCred.user.uid).get();
+        const isUnverified = userDoc.exists && userDoc.data().emailVerified === false;
+
+        if (isUnverified) {
+          // Yarım kalmış kayıt — doğrulama ekranına al
+          pendingUser = signInCred.user;
+          document.getElementById('verifyEmailText').textContent = email;
+          const savedName = userDoc.data()?.profile?.name || name;
+          const sent = await sendVerificationCode(email, savedName);
+          if (sent) toast('Doğrulama kodu yeniden gönderildi', 'success');
+          else toast('E-posta gönderilemedi. "Kodu tekrar gönder"e tıklayın.', 'error');
+          document.getElementById('registerDetails').style.display = 'none';
+          document.getElementById('registerVerify').style.display = 'block';
+          document.getElementById('code1').focus();
+        } else {
+          // Hesap zaten aktif — girişe yönlendir
+          toast('Bu e-posta zaten kayıtlı. Giriş yapın.', 'error');
+          setTimeout(() => switchTab('login'), 1500);
+        }
+      } catch (signInErr) {
+        // Yanlış şifre veya başka hata
+        if (signInErr.code === 'auth/wrong-password' || signInErr.code === 'auth/invalid-credential') {
+          toast('Bu e-posta başka bir hesapta kullanılıyor', 'error');
+        } else {
+          toast('Bu e-posta zaten kullanımda', 'error');
+        }
+      }
+    } else if (err.code === 'auth/weak-password') {
+      toast('Şifre çok zayıf', 'error');
+    } else if (err.code === 'auth/invalid-email') {
+      toast('Geçersiz e-posta adresi', 'error');
+    } else {
+      toast('Kayıt hatası: ' + (err.message || err.code), 'error');
+    }
   }
 }
 
