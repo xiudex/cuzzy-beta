@@ -701,27 +701,22 @@ body::after {
       </div>
 
       <div id="registerVerify" style="display:none">
-        <p style="color:var(--text-soft);font-size:0.88rem;margin-bottom:14px;line-height:1.55;text-align:center">
-          E-postana <strong style="color:var(--text)" id="verifyEmailText">—</strong> 6 haneli kod gönderdik.<br>
-          Spam klasörünü de kontrol et.
+        <div style="text-align:center;font-size:2.2rem;margin-bottom:14px">📧</div>
+        <p style="color:var(--text-soft);font-size:0.88rem;margin-bottom:8px;line-height:1.6;text-align:center">
+          <strong style="color:var(--text)" id="verifyEmailText">—</strong><br>
+          adresine doğrulama linki gönderdik.<br>
+          E-postanı aç, <strong style="color:var(--accent)">linke tıkla</strong>,<br>
+          sonra aşağıdaki butona bas.
         </p>
-        <div class="code-row">
-          <input type="text" maxlength="1" class="code-box" id="code1" oninput="codeInput(1)" onkeydown="codeKeydown(event,1)">
-          <input type="text" maxlength="1" class="code-box" id="code2" oninput="codeInput(2)" onkeydown="codeKeydown(event,2)">
-          <input type="text" maxlength="1" class="code-box" id="code3" oninput="codeInput(3)" onkeydown="codeKeydown(event,3)">
-          <input type="text" maxlength="1" class="code-box" id="code4" oninput="codeInput(4)" onkeydown="codeKeydown(event,4)">
-          <input type="text" maxlength="1" class="code-box" id="code5" oninput="codeInput(5)" onkeydown="codeKeydown(event,5)">
-          <input type="text" maxlength="1" class="code-box" id="code6" oninput="codeInput(6)" onkeydown="codeKeydown(event,6)">
-        </div>
-        <div class="code-timer" id="codeTimer"></div>
-        <button class="fizzy-btn" id="verifyCodeBtn" onclick="verifyCode()">
+        <p style="color:var(--text-muted);font-size:0.78rem;text-align:center;margin-bottom:12px">💡 Spam / önemsiz klasörünü de kontrol et.</p>
+        <button class="fizzy-btn" id="verifyCodeBtn" onclick="checkEmailVerified()">
           <div class="btn-inner">
-            <span class="btn-text">Doğrula</span>
-            <div class="btn-loading"><div class="spinner"></div><span>Doğrulanıyor…</span></div>
+            <span class="btn-text">✓ E-postamı Doğruladım</span>
+            <div class="btn-loading"><div class="spinner"></div><span>Kontrol ediliyor…</span></div>
             <div class="tick-mark"><svg viewBox="0 0 52 52"><circle class="tick-circle" cx="26" cy="26" r="25"/><path class="tick-check" d="M14 27l7 7 16-16"/></svg></div>
           </div>
         </button>
-        <button class="link-btn" id="resendCodeBtn" onclick="resendCode()">Kodu tekrar gönder</button>
+        <button class="link-btn" id="resendCodeBtn" onclick="resendCode()">Linki tekrar gönder</button>
       </div>
     </div>
 
@@ -968,34 +963,14 @@ function startCodeTimer() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// SEND VERIFICATION CODE (EmailJS + sessionStorage)
-// Firestore yerine sessionStorage kullanılıyor — Firestore izin
-// hatalarını ve ad-blocker engellemelerini bypass eder.
+// SEND VERIFICATION EMAIL (Firebase built-in)
+// EmailJS yerine Firebase Auth'un kendi e-posta sistemi kullanılır.
+// Şifre sıfırlama gibi Firebase altyapısıyla güvenilir çalışır.
 // ════════════════════════════════════════════════════════════════
 async function sendVerificationCode(email, name) {
-  const code = generateCode();
-  const expireTime = Date.now() + 5 * 60 * 1000;
-
   try {
     if (!pendingUser) throw new Error('No pending user');
-
-    if (typeof emailjs === 'undefined') throw new Error('EmailJS not loaded');
-
-    const resp = await emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
-      email,
-      to_email: email,
-      to_name: name || 'Kullanıcı',
-      verification_code: code
-    });
-    const ok = resp && (resp.status === 200 || String(resp.text || '').toUpperCase() === 'OK');
-    if (!ok) throw new Error('EmailJS response: ' + (resp?.status ?? 'unknown'));
-
-    // Kodu session'a kaydet (Firestore izin sorunlarını önler)
-    sessionStorage.setItem('pendingVerify_' + pendingUser.uid,
-      JSON.stringify({ code, expireTime, attempts: 0 }));
-
-    codeExpireTime = expireTime;
-    startCodeTimer();
+    await pendingUser.sendEmailVerification();
     return true;
   } catch (e) {
     console.error('sendVerificationCode err:', e);
@@ -1039,11 +1014,9 @@ async function handleRegister() {
 
     const sent = await sendVerificationCode(email, name);
 
-    // Kod Firestore'da mevcut — EmailJS başarısız olsa bile doğrulama
-    // ekranını göster, kullanıcı "tekrar gönder" butonunu kullanabilir
     setFizzyState('registerContinueBtn', sent ? 'success' : 'idle');
-    if (sent) toast('Kod gönderildi!', 'success');
-    else toast('E-posta gönderilemedi. "Kodu tekrar gönder"e tıklayın.', 'error');
+    if (sent) toast('Doğrulama linki gönderildi!', 'success');
+    else toast('E-posta gönderilemedi. "Linki tekrar gönder"e tıklayın.', 'error');
 
     setTimeout(() => {
       setFizzyState('registerContinueBtn', 'idle');
@@ -1070,8 +1043,8 @@ async function handleRegister() {
           document.getElementById('verifyEmailText').textContent = email;
           const savedName = userDoc.data()?.profile?.name || name;
           const sent = await sendVerificationCode(email, savedName);
-          if (sent) toast('Doğrulama kodu yeniden gönderildi', 'success');
-          else toast('E-posta gönderilemedi. "Kodu tekrar gönder"e tıklayın.', 'error');
+          if (sent) toast('Doğrulama linki yeniden gönderildi', 'success');
+          else toast('E-posta gönderilemedi. "Linki tekrar gönder"e tıklayın.', 'error');
           document.getElementById('registerDetails').style.display = 'none';
           document.getElementById('registerVerify').style.display = 'block';
           document.getElementById('code1').focus();
@@ -1099,51 +1072,33 @@ async function handleRegister() {
 }
 
 // ════════════════════════════════════════════════════════════════
-// VERIFY CODE
+// CHECK EMAIL VERIFIED (Firebase Auth)
+// Kullanıcı e-postadaki linke tıkladıktan sonra Firebase Auth
+// durumunu yeniler; emailVerified = true ise Firestore'u günceller.
 // ════════════════════════════════════════════════════════════════
-async function verifyCode() {
-  const code = getCode();
-  if (code.length !== 6) return toast('6 haneli kodu girin', 'error');
+async function checkEmailVerified() {
   if (!pendingUser) return toast('Oturum bulunamadı', 'error');
 
   setFizzyState('verifyCodeBtn', 'loading');
 
-  const storageKey = 'pendingVerify_' + pendingUser.uid;
-
   try {
-    const stored = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+    // Firebase Auth token'ını yenile — emailVerified güncel durumu al
+    await pendingUser.reload();
+    const refreshed = auth.currentUser;
 
-    if (!stored) {
-      setFizzyState('verifyCodeBtn', 'idle');
-      return toast('Kod bulunamadı, tekrar gönderin', 'error');
-    }
-    if (Date.now() > stored.expireTime) {
-      setFizzyState('verifyCodeBtn', 'idle');
-      return toast('Kodun süresi dolmuş', 'error');
-    }
-    if (stored.attempts >= 5) {
-      setFizzyState('verifyCodeBtn', 'idle');
-      return toast('Çok fazla yanlış deneme', 'error');
-    }
-
-    if (code === stored.code) {
-      sessionStorage.removeItem(storageKey);
+    if (refreshed && refreshed.emailVerified) {
       await db.collection('users').doc(pendingUser.uid).update({
         emailVerified: true, verifiedAt: Date.now()
       });
       setFizzyState('verifyCodeBtn', 'success');
       toast('Doğrulandı! Yönlendiriliyor...', 'success');
-      clearInterval(codeTimerInterval);
       setTimeout(() => { window.location.href = 'app.html'; }, 1200);
     } else {
-      stored.attempts++;
-      sessionStorage.setItem(storageKey, JSON.stringify(stored));
       setFizzyState('verifyCodeBtn', 'idle');
-      toast(`Yanlış kod. ${Math.max(0, 4 - stored.attempts)} hak kaldı.`, 'error');
-      clearCode();
+      toast('E-posta henüz doğrulanmamış. Linke tıkladıktan sonra tekrar dene.', 'error');
     }
   } catch (e) {
-    console.error('Verify err:', e);
+    console.error('checkEmailVerified err:', e);
     setFizzyState('verifyCodeBtn', 'idle');
     toast('Doğrulama hatası', 'error');
   }
@@ -1154,11 +1109,10 @@ async function resendCode() {
   const btn = document.getElementById('resendCodeBtn');
   btn.disabled = true;
   btn.textContent = 'Gönderiliyor...';
-  const name = document.getElementById('regUsername').value.trim();
-  const ok = await sendVerificationCode(pendingUser.email, name);
+  const ok = await sendVerificationCode(pendingUser.email, '');
   btn.disabled = false;
-  btn.textContent = 'Kodu tekrar gönder';
-  if (ok) { toast('Yeni kod gönderildi', 'success'); clearCode(); }
+  btn.textContent = 'Linki tekrar gönder';
+  if (ok) toast('Yeni doğrulama linki gönderildi', 'success');
   else toast('Gönderilemedi', 'error');
 }
 
