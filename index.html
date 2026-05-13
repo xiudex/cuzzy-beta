@@ -977,20 +977,24 @@ async function sendVerificationCode(email, name) {
   try {
     if (!pendingUser) throw new Error('No pending user');
 
+    // Eskiyi önce sil; var olan belge güncelleme kuralına takılır
+    // (kod değiştirilemiyor, attempts sıfırlanamıyor), bu yüzden silip yeniden oluşturuyoruz
+    await db.collection('verificationCodes').doc(pendingUser.uid).delete().catch(() => {});
+
     await db.collection('verificationCodes').doc(pendingUser.uid).set({
       code, expireTime, attempts: 0
     });
 
-    if (typeof emailjs !== 'undefined') {
-      const resp = await emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
-        email,
-        to_email: email,
-        to_name: name || 'Kullanıcı',
-        verification_code: code
-      });
-      const ok = resp && (resp.status === 200 || String(resp.text || '').toUpperCase() === 'OK');
-      if (!ok) throw new Error('EmailJS unexpected response');
-    }
+    if (typeof emailjs === 'undefined') throw new Error('EmailJS not loaded');
+
+    const resp = await emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
+      email,
+      to_email: email,
+      to_name: name || 'Kullanıcı',
+      verification_code: code
+    });
+    const ok = resp && (resp.status === 200 || String(resp.text || '').toUpperCase() === 'OK');
+    if (!ok) throw new Error('EmailJS unexpected response');
 
     codeExpireTime = expireTime;
     startCodeTimer();
