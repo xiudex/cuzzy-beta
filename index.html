@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5">
+<meta name="description" content="Cüzzy — kişisel finans yönetimi, yatırım takibi ve canlı piyasa">
+<meta name="theme-color" content="#22d3ee">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="X-Frame-Options" content="DENY">
+<meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=(), payment=(), usb=()">
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com data:;
+  img-src 'self' data: blob: https:;
+  connect-src 'self'
+    https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com
+    https://*.cloudfunctions.net https://api.emailjs.com
+    http://localhost:* http://127.0.0.1:*;
+  frame-src 'self' https://*.firebaseapp.com;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'self';
+">
+<title>Cüzzy — Giriş</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<style>
+:root {
+  --accent: #22d3ee; --accent-rgb: 34, 211, 238;
+  --accent2: #818cf8; --accent2-rgb: 129, 140, 248;
+  --accent-soft: rgba(34, 211, 238, 0.10);
+  --accent-strong: rgba(34, 211, 238, 0.28);
+  --accent-glow: rgba(34, 211, 238, 0.35);
+  --success: #34d399; --success-rgb: 52, 211, 153;
+  --error: #f87171; --error-rgb: 248, 113, 113;
+  --warning: #fbbf24;
+  --bg: #050816;
+  --text: #f0f4ff; --text-soft: #a5b0c8; --text-muted: #6b7491;
+  --glass: rgba(255, 255, 255, 0.05);
+  --glass-strong: rgba(255, 255, 255, 0.09);
+  --glass-border: rgba(255, 255, 255, 0.10);
+  --glass-border-strong: rgba(255, 255, 255, 0.18);
+  --input-bg: rgba(0, 0, 0, 0.25);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+html { font-size: 16px; }
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  position: relative;
+}
+
+/* Aurora background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(34, 211, 238, 0.18), transparent 50%),
+    radial-gradient(ellipse 70% 60% at 85% 30%, rgba(129, 140, 248, 0.16), transparent 50%),
+    radial-gradient(ellipse 80% 70% at 50% 90%, rgba(167, 139, 250, 0.12), transparent 50%);
+}
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 50% at 60% 50%, rgba(34, 211, 238, 0.05), transparent 60%);
+  animation: auroraFloat 25s ease-in-out infinite;
+}
+@keyframes auroraFloat {
+  0%, 100% { transform: translate(0,0) scale(1); opacity: 0.6; }
+  50% { transform: translate(40px, -30px) scale(1.1); opacity: 1; }
+}
+
+/* Layout */
+.page-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px 40px;
+  position: relative;
+}
+
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 40px;
+  align-items: center;
+  max-width: 1280px;
+  width: 100%;
+  margin-top: 28px;
+}
+
+.feature-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+.feature-column.left { align-items: flex-end; }
+.feature-column.right { align-items: flex-start; }
+
+.brand-header {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-logo {
+  width: 32px;
+  height: 32px;
+}
+.brand-name {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.brand-name em { color: var(--accent); font-style: normal; }
+
+/* Hero */
+.hero {
+  text-align: center;
+  max-width: 600px;
+  margin-bottom: 40px;
+}
+.hero-eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  margin-bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-strong);
+}
+.hero-title {
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+  margin-bottom: 18px;
+}
+.hero-title em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-sub {
+  font-size: 1.05rem;
+  color: var(--text-soft);
+  line-height: 1.6;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* Auth card (glass) */
+.auth-card {
+  background: var(--glass-strong);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--glass-border-strong);
+  border-radius: 20px;
+  padding: 28px;
+  width: 420px;
+  max-width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  position: relative;
+  flex-shrink: 0;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--input-bg);
+  border-radius: 12px;
+  margin-bottom: 22px;
+  position: relative;
+}
+.auth-tab {
+  padding: 11px 16px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 2;
+}
+.auth-tab.active { color: var(--text); }
+.auth-tabs::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 9px;
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.6, 1);
+  z-index: 1;
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.3);
+}
+.auth-tabs.show-register::before { transform: translateX(100%); }
+.auth-tab.active { color: #07101a; }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.field input {
+  background: var(--input-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  transition: border-color 0.25s ease, background 0.25s ease;
+  width: 100%;
+}
+.field input:focus {
+  outline: none;
+  border-color: var(--accent-strong);
+  background: rgba(0, 0, 0, 0.35);
+}
+.field input::placeholder { color: var(--text-muted); }
+
+.pw-wrapper { position: relative; }
+.pw-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+.pw-toggle:hover { color: var(--text); background: var(--glass); }
+.pw-toggle svg { width: 18px; height: 18px; }
+.pw-toggle .eye-off { display: none; }
+.pw-toggle.active .eye-on { display: none; }
+.pw-toggle.active .eye-off { display: block; }
+
+/* Fizzy button */
+.fizzy-btn {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #07101a;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  margin-top: 8px;
+}
+.fizzy-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(var(--accent-rgb), 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.fizzy-btn:active:not(:disabled) { transform: translateY(0); }
+.fizzy-btn:disabled { cursor: not-allowed; opacity: 0.7; }
+.btn-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-text, .btn-loading, .tick-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: absolute;
+  transition: opacity 0.25s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-loading, .tick-mark { opacity: 0; transform: translateY(8px); }
+.fizzy-btn.loading .btn-text { opacity: 0; transform: translateY(-8px); }
+.fizzy-btn.loading .btn-loading { opacity: 1; transform: translateY(0); }
+.fizzy-btn.success .btn-text { opacity: 0; }
+.fizzy-btn.success .btn-loading { opacity: 0; }
+.fizzy-btn.success .tick-mark { opacity: 1; transform: translateY(0); }
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(7, 16, 26, 0.25);
+  border-top-color: #07101a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.tick-mark svg {
+  width: 24px;
+  height: 24px;
+}
+.tick-circle {
+  fill: none;
+  stroke: #07101a;
+  stroke-width: 2.5;
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  animation: tick-circle 0.6s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.tick-check {
+  fill: none;
+  stroke: #07101a;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: tick-check 0.4s 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes tick-circle { to { stroke-dashoffset: 0; } }
+@keyframes tick-check { to { stroke-dashoffset: 0; } }
+
+.fizzy-btn.success { background: linear-gradient(135deg, var(--success), #22c55e); }
+
+.form-section { display: none; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.form-section.active { display: block; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.84rem;
+  cursor: pointer;
+  text-align: center;
+  display: block;
+  margin: 14px auto 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color 0.25s, background 0.25s;
+}
+.link-btn:hover { color: var(--accent); background: var(--glass); }
+
+/* Code input */
+.code-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin: 14px 0;
+}
+.code-box {
+  height: 56px;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  border: 2px solid var(--glass-border-strong);
+  border-radius: 12px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  transition: all 0.2s;
+  width: 100%;
+}
+.code-box:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+
+.code-timer {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-height: 20px;
+  margin-bottom: 10px;
+}
+
+/* Result box */
+.result-box {
+  display: none;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  font-size: 0.86rem;
+  margin: 12px 0;
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  background: var(--glass-strong);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border-strong);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  pointer-events: auto;
+}
+.toast.success { color: var(--success); border-color: rgba(var(--success-rgb), 0.4); }
+.toast.error { color: var(--error); border-color: rgba(var(--error-rgb), 0.4); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Footer features */
+.feature-card {
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 320px;
+  transition: border-color 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
+}
+.feature-card:hover {
+  border-color: var(--glass-border-strong);
+  background: var(--glass-strong);
+  transform: translateY(-2px);
+}
+.feature-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.feature-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.20), rgba(var(--accent2-rgb), 0.15));
+  border: 1px solid var(--accent-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.feature-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.feature-desc {
+  font-size: 0.84rem;
+  color: var(--text-soft);
+  line-height: 1.55;
+}
+
+/* Splash for redirect */
+.splash {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 9000;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+.splash.hidden { opacity: 0; pointer-events: none; }
+.splash-logo { font-size: 3rem; animation: pulseSplash 1.4s ease-in-out infinite; }
+@keyframes pulseSplash {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+.splash-text { font-size: 1.2rem; font-weight: 700; }
+.splash-text em { color: var(--accent); font-style: normal; }
+
+/* Mobile */
+@media (max-width: 1100px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .feature-column {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+  }
+  .feature-column.left, .feature-column.right { align-items: stretch; }
+  .feature-card { max-width: 280px; flex: 1 1 280px; }
+}
+@media (max-width: 600px) {
+  .auth-card { padding: 22px; }
+  .hero-title { font-size: 2rem; }
+  .feature-card { max-width: 100%; padding: 16px 18px; }
+  .feature-icon-wrap { width: 36px; height: 36px; font-size: 1.1rem; }
+  .feature-title { font-size: 0.92rem; }
+  .feature-desc { font-size: 0.78rem; }
+  .code-box { height: 48px; font-size: 1.2rem; }
+  .brand-header { top: 16px; }
+  .page-wrap { padding: 70px 16px 30px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- SPLASH for redirect -->
+<div class="splash" id="splash">
+  <div class="splash-logo">💰</div>
+  <div class="splash-text">Cüz<em>zy</em></div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="page-wrap">
+
+  <!-- Brand header -->
+  <div class="brand-header">
+    <svg class="brand-logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L4 6V12C4 16.4 7.4 20.5 12 22C16.6 20.5 20 16.4 20 12V6L12 2Z" stroke="url(#brandGrad)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M9 12L11 14L15 10" stroke="url(#brandGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="brandGrad" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#22d3ee"/>
+          <stop offset="1" stop-color="#818cf8"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="brand-name">Cüz<em>zy</em></div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">✨ Kişisel finans</div>
+    <h1 class="hero-title">Paranı <em>akıllıca</em> yönet</h1>
+    <p class="hero-sub">
+      Gelir-giderlerini tek panelde topla, yatırımlarını canlı takip et,
+      hedeflerine ulaş. Türkiye için tasarlandı.
+    </p>
+  </div>
+
+  <!-- Main 3-column grid: features | auth | features -->
+  <div class="main-grid">
+
+    <!-- SOL FEATURE'LAR -->
+    <div class="feature-column left">
+      <div class="feature-card">
+        <div class="feature-card-head">
+          <div class="feature-icon-wrap">⚡</div>
+          <div class="feature-title">Canlı piyasa takibi</div>
+        </div>
+        <div class="feature-desc">Döviz, kripto ve BIST hisselerini gerçek zamanlı izle. Üst panelde sürekli gözünün önünde olsun.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-head">
+          <div class="feature-icon-wrap">📊</div>
+          <div class="feature-title">Akıllı bütçe</div>
+        </div>
+        <div class="feature-desc">Aylık limit belirle, eşiğe yaklaştığında otomatik uyarı al. Harcama trendlerini grafiklerle gör.</div>
+      </div>
+    </div>
+
+    <!-- ORTA: Auth card -->
+    <div class="auth-card">
+      <div class="auth-tabs" id="authTabs">
+        <button class="auth-tab active" data-tab="login" onclick="switchTab('login')">Giriş</button>
+        <button class="auth-tab" data-tab="register" onclick="switchTab('register')">Kayıt</button>
+      </div>
+
+    <!-- LOGIN -->
+    <div class="form-section active" id="loginSection">
+
+      <!-- ADIM 1: E-posta + Şifre -->
+      <div id="loginFormFields">
+        <div class="field">
+          <label>E-posta</label>
+          <input type="email" id="loginEmail" placeholder="ornek@mail.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Şifre</label>
+          <div class="pw-wrapper">
+            <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+            <button type="button" class="pw-toggle" onclick="togglePwVisibility(this)" title="Göster/gizle">
+              <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="fizzy-btn" id="loginBtn" onclick="handleLogin()">
+          <div class="btn-inner">
+            <span class="btn-text">Giriş Yap</span>
+            <div class="btn-loading"><div class="spinner"></div><span>Giriş yapılıyor…</span></div>
+            <div class="tick-mark"><svg viewBox="0 0 52 52"><circle class="tick-circle" cx="26" cy="26" r="25"/><path class="tick-check" d="M14 27l7 7 16-16"/></svg></div>
+          </div>
+        </button>
+        <button class="link-btn" onclick="switchTab('forgot')">Şifremi unuttum</button>
+      </div>
+
+      <!-- ADIM 2: 6 haneli doğrulama kodu (2FA) -->
+      <div id="loginVerifyStep" style="display:none">
+        <p style="color:var(--text-soft);font-size:0.88rem;margin-bottom:14px;text-align:center;line-height:1.55">
+          <strong style="color:var(--text)" id="loginVerifyEmailDisplay">—</strong> adresine<br>
+          6 haneli kod gönderdik. <strong style="color:var(--text)">Spam</strong> klasörünü de kontrol et.
+        </p>
+        <div style="margin:12px 0">
+          <input type="text" id="loginCodeInput" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
+                 placeholder="1 2 3 4 5 6"
+                 style="width:100%;box-sizing:border-box;font-family:'JetBrains Mono',monospace;font-size:1.2rem;letter-spacing:0.4em;text-align:center;padding:12px 8px;background:var(--input-bg,rgba(255,255,255,0.06));border:2px solid var(--glass-border-strong,rgba(255,255,255,0.15));border-radius:12px;color:var(--text,#f0f4ff);outline:none"
+                 oninput="lcodeInput()" onkeydown="if(event.key==='Enter')confirmLoginCode()">
+        </div>
+        <div class="code-timer" id="loginVerifyTimer"></div>
+        <button class="fizzy-btn" id="loginVerifyBtn" onclick="confirmLoginCode()">
+          <div class="btn-inner">
+            <span class="btn-text">Doğrula</span>
+            <div class="btn-loading"><div class="spinner"></div><span>Doğrulanıyor…</span></div>
+            <div class="tick-mark"><svg viewBox="0 0 52 52"><circle class="tick-circle" cx="26" cy="26" r="25"/><path class="tick-check" d="M14 27l7 7 16-16"/></svg></div>
+          </div>
+        </button>
+        <button class="link-btn" onclick="resendLoginCode()">Kodu tekrar gönder</button>
+        <button class="link-btn" onclick="cancelLoginVerify()">← Girişe dön</button>
+      </div>
+
+    </div>
+
+    <!-- REGISTER -->
+    <div class="form-section" id="registerSection">
+      <div id="registerDetails">
+        <div class="field">
+          <label>İsim</label>
+          <input type="text" id="regUsername" placeholder="Adınız" autocomplete="name" maxlength="30">
+        </div>
+        <div class="field">
+          <label>E-posta</label>
+          <input type="email" id="regEmail" placeholder="ornek@mail.com" autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Şifre</label>
+          <div class="pw-wrapper">
+            <input type="password" id="regPassword" placeholder="En az 8 karakter" autocomplete="new-password">
+            <button type="button" class="pw-toggle" onclick="togglePwVisibility(this)" title="Göster/gizle">
+              <svg class="eye-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="fizzy-btn" id="registerContinueBtn" onclick="handleRegister()">
+          <div class="btn-inner">
+            <span class="btn-text">Hesap Oluştur</span>
+            <div class="btn-loading"><div class="spinner"></div><span>Oluşturuluyor…</span></div>
+            <div class="tick-mark"><svg viewBox="0 0 52 52"><circle class="tick-circle" cx="26" cy="26" r="25"/><path class="tick-check" d="M14 27l7 7 16-16"/></svg></div>
+          </div>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div class="form-section" id="forgotSection">
+      <p style="color:var(--text-soft);font-size:0.88rem;margin-bottom:18px;text-align:center;line-height:1.55">
+        E-postanı gir, <strong style="color:var(--text)">şifre sıfırlama bağlantısı</strong> göndereceğiz.
+      </p>
+      <div class="field">
+        <label>E-posta</label>
+        <input type="email" id="forgotEmail" placeholder="ornek@mail.com" autocomplete="email">
+      </div>
+      <button class="fizzy-btn" id="forgotSendBtn" onclick="sendPasswordResetLink()">
+        <div class="btn-inner">
+          <span class="btn-text">Sıfırlama Bağlantısı Gönder</span>
+          <div class="btn-loading"><div class="spinner"></div><span>Gönderiliyor…</span></div>
+          <div class="tick-mark"><svg viewBox="0 0 52 52"><circle class="tick-circle" cx="26" cy="26" r="25"/><path class="tick-check" d="M14 27l7 7 16-16"/></svg></div>
+        </div>
+      </button>
+      <div class="result-box" id="forgotResult"></div>
+      <p style="color:var(--text-muted);font-size:0.78rem;margin-top:12px;text-align:center;line-height:1.5">
+        💡 Mail 1-2 dakika içinde gelmezse <strong style="color:var(--text-soft)">spam/önemsiz</strong> klasörünü kontrol et.
+      </p>
+      <button class="link-btn" onclick="switchTab('login')">← Girişe dön</button>
+    </div>
+
+    </div>
+    <!-- /auth-card -->
+
+    <!-- SAĞ FEATURE'LAR -->
+    <div class="feature-column right">
+      <div class="feature-card">
+        <div class="feature-card-head">
+          <div class="feature-icon-wrap">🎯</div>
+          <div class="feature-title">Birikim hedefleri</div>
+        </div>
+        <div class="feature-desc">Araba, ev, tatil — hedeflerini belirle, ilerlemeni grafiklerle takip et. Hedefe yaklaştıkça heyecanlan.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-head">
+          <div class="feature-icon-wrap">🔒</div>
+          <div class="feature-title">PIN korumalı</div>
+        </div>
+        <div class="feature-desc">4 haneli PIN kilidi, otomatik oturum kapatma, şifreli senkron. Verilerin sadece sana ait.</div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /main-grid -->
+
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// GÜVENLİK
+// ════════════════════════════════════════════════════════════════
+const ALLOWED_DOMAINS = ['localhost', '127.0.0.1', 'xiudex.github.io'];
+const currentDomain = window.location.hostname;
+const isLocalDev = currentDomain === 'localhost' || currentDomain === '127.0.0.1' || currentDomain === '' || window.location.protocol === 'file:';
+
+if (!isLocalDev && !ALLOWED_DOMAINS.includes(currentDomain)) {
+  document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#f87171;font-family:sans-serif"><h1>⛔ Yetkisiz erişim</h1></div>';
+  throw new Error('Unauthorized domain');
+}
+
+// ════════════════════════════════════════════════════════════════
+// FIREBASE / EMAILJS YÜKLEM E KONTROLÜ
+// ════════════════════════════════════════════════════════════════
+function showLoadError(missing) {
+  const isFile = window.location.protocol === 'file:';
+  document.getElementById('splash').classList.add('hidden');
+  document.body.insertAdjacentHTML('beforeend', `
+    <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;font-family:system-ui;background:#050816;color:#f0f4ff;z-index:99999">
+      <div style="max-width:560px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.18);border-radius:20px;padding:32px;backdrop-filter:blur(24px)">
+        <div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>
+        <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:12px">${missing} yüklenemedi</h1>
+        <p style="color:#a5b0c8;line-height:1.6;margin-bottom:16px">
+          ${isFile ? `Dosyayı çift tıklayarak (file://) açtın. Tarayıcılar güvenlik gereği file:// protokolünden CDN'e erişimi engeller.<br><br>
+          <strong style="color:#22d3ee">Çözüm:</strong>
+          <pre style="background:rgba(0,0,0,0.4);padding:12px 14px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;margin:12px 0;color:#34d399;text-align:left;overflow-x:auto">cd "$(dirname "$(realpath index.html)")"<br>python3 -m http.server 8000</pre>
+          Sonra: <code style="background:rgba(0,0,0,0.4);padding:3px 8px;border-radius:6px;color:#22d3ee">http://localhost:8000/index.html</code>` : 'İnternet bağlantınızı veya tarayıcı eklentilerinizi (uBlock vb.) kontrol edin.'}
+        </p>
+        <button onclick="location.reload()" style="background:linear-gradient(135deg,#22d3ee,#818cf8);border:none;color:#07101a;padding:10px 20px;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit">↻ Yeniden dene</button>
+      </div>
+    </div>`);
+  throw new Error(missing + ' not loaded');
+}
+
+if (typeof firebase === 'undefined') showLoadError('Firebase');
+if (typeof firebase.firestore === 'undefined') showLoadError('Firebase Firestore');
+
+
+// ════════════════════════════════════════════════════════════════
+// FIREBASE CONFIG
+// ════════════════════════════════════════════════════════════════
+const _0x = ['QUl6YVN5QkUz', 'QmdFQ2NTMmZY', 'UmNZSzZub18t', 'Y3dyRjJOQy00bl9Z'];
+const _p = ['Y3V6enktYXBw', 'LTFjZTg3'];
+const firebaseConfig = {
+  apiKey: atob(_0x.join('')),
+  authDomain: atob(_p.join('')) + ".firebaseapp.com",
+  projectId: atob(_p.join('')),
+  storageBucket: atob(_p.join('')) + ".firebasestorage.app",
+  messagingSenderId: "572246140076",
+  appId: "1:572246140076:web:bdbe0a492db4599c206b09"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+auth.languageCode = 'tr';
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e => console.warn(e));
+
+// ════════════════════════════════════════════════════════════════
+// EMAILJS CONFIG
+// ════════════════════════════════════════════════════════════════
+const _e = ['c2VydmljZV9pc2F1aHRs', 'dGVtcGxhdGVfeXZyZHptYQ==', 'LUtUZWFEUU5nOGVOelpqbjA='];
+const EMAILJS_CONFIG = { serviceId: atob(_e[0]), templateId: atob(_e[1]), publicKey: atob(_e[2]) };
+if (typeof emailjs !== 'undefined') emailjs.init(EMAILJS_CONFIG.publicKey);
+
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+let pendingUser = null;
+let currentTab = 'login';
+let loginVerifyPending = false;
+let loginVerifyCode = null;
+let loginVerifyExpire = 0;
+let loginVerifyAttempts = 0;
+let loginVerifyTimerInt = null;
+let loginVerifyUser = null;
+
+// ════════════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════════════
+function setFizzyState(btnId, state) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.classList.remove('loading', 'success');
+  btn.disabled = false;
+  if (state === 'loading') { btn.classList.add('loading'); btn.disabled = true; }
+  else if (state === 'success') { btn.classList.add('success'); btn.disabled = true; }
+}
+
+function toast(msg, type = 'success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.transition = 'opacity 0.3s, transform 0.3s';
+    t.style.opacity = '0';
+    t.style.transform = 'translateY(-8px)';
+    setTimeout(() => t.remove(), 300);
+  }, 2700);
+}
+
+function togglePwVisibility(btn) {
+  const input = btn.parentElement.querySelector('input');
+  if (!input) return;
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+  btn.classList.toggle('active', isPassword);
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+  const tabsEl = document.getElementById('authTabs');
+
+  if (tab === 'login') {
+    document.getElementById('loginSection').classList.add('active');
+    tabsEl.classList.remove('show-register');
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'login'));
+  } else if (tab === 'register') {
+    document.getElementById('registerSection').classList.add('active');
+    tabsEl.classList.add('show-register');
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'register'));
+  } else if (tab === 'forgot') {
+    document.getElementById('forgotSection').classList.add('active');
+    // Login email'i otomatik kopyala
+    const loginEmail = document.getElementById('loginEmail').value;
+    const forgotEmail = document.getElementById('forgotEmail');
+    if (loginEmail && !forgotEmail.value) forgotEmail.value = loginEmail;
+    // Resultu temizle
+    const r = document.getElementById('forgotResult');
+    r.style.display = 'none';
+    r.innerHTML = '';
+    setFizzyState('forgotSendBtn', 'idle');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// REGISTER
+// ════════════════════════════════════════════════════════════════
+async function handleRegister() {
+  const name = document.getElementById('regUsername').value.trim();
+  const email = document.getElementById('regEmail').value.trim().toLowerCase();
+  const password = document.getElementById('regPassword').value;
+
+  if (!name || name.length < 2) return toast('Geçerli bir isim girin', 'error');
+  if (!email || !/\S+@\S+\.\S+/.test(email)) return toast('Geçerli bir e-posta girin', 'error');
+  if (!password || password.length < 8) return toast('Şifre en az 8 karakter olmalı', 'error');
+
+  setFizzyState('registerContinueBtn', 'loading');
+
+  try {
+    const userCred = await auth.createUserWithEmailAndPassword(email, password);
+
+    await db.collection('users').doc(userCred.user.uid).set({
+      profile: { name },
+      email,
+      emailVerified: false,
+      createdAt: Date.now(),
+      transactions: [], recurring: [], goals: [], investments: [],
+      debts: [], subscriptions: [], notes: [], uploads: [], watchlist: [],
+      pin: '', theme: 'aurora', wallpaper: 'aurora',
+      plan: 'free', adsEnabled: true, autoLogout: 30,
+      monthlyBudget: 0, budgetWarningThreshold: 80,
+      notifications: { income: true, expense: true, goals: true },
+      tourCompleted: false
+    });
+
+    setFizzyState('registerContinueBtn', 'success');
+    toast('Hesap oluşturuldu! E-postanı doğrula.', 'success');
+    setTimeout(() => { window.location.href = 'app.html'; }, 1200);
+
+  } catch (err) {
+    console.error('Register err:', err);
+    setFizzyState('registerContinueBtn', 'idle');
+
+    if (err.code === 'auth/email-already-in-use') {
+      toast('Bu e-posta zaten kayıtlı. Giriş yapın.', 'error');
+      setTimeout(() => switchTab('login'), 1500);
+    } else if (err.code === 'auth/weak-password') {
+      toast('Şifre çok zayıf', 'error');
+    } else if (err.code === 'auth/invalid-email') {
+      toast('Geçersiz e-posta adresi', 'error');
+    } else {
+      toast('Kayıt hatası: ' + (err.message || err.code), 'error');
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════════════════════════
+async function handleLogin() {
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) return toast('E-posta ve şifre girin', 'error');
+
+  setFizzyState('loginBtn', 'loading');
+  loginVerifyPending = true; // onAuthStateChanged auto-redirect'i engelle (await öncesi set edilmeli)
+
+  try {
+    const cred = await auth.signInWithEmailAndPassword(email, password);
+    loginVerifyUser = cred.user;
+
+    const ok = await sendLoginCode(cred.user, email);
+    if (!ok) {
+      loginVerifyPending = false;
+      setFizzyState('loginBtn', 'idle');
+      toast('Doğrulama kodu gönderilemedi. Tekrar deneyin.', 'error');
+      await auth.signOut();
+      return;
+    }
+
+    setFizzyState('loginBtn', 'idle');
+    document.getElementById('loginVerifyEmailDisplay').textContent = email;
+    showLoginVerifyStep();
+
+  } catch (err) {
+    loginVerifyPending = false;
+    console.error('Login err:', err);
+    setFizzyState('loginBtn', 'idle');
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      toast('E-posta veya şifre yanlış', 'error');
+    } else if (err.code === 'auth/too-many-requests') {
+      toast('Çok fazla deneme. 5-10 dakika bekleyin.', 'error');
+    } else if (err.code === 'auth/network-request-failed') {
+      toast('İnternet bağlantısı hatası', 'error');
+    } else {
+      toast('Giriş hatası: ' + (err.message || err.code), 'error');
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// LOGIN 2FA
+// ════════════════════════════════════════════════════════════════
+function showLoginVerifyStep() {
+  document.getElementById('loginFormFields').style.display = 'none';
+  document.getElementById('loginVerifyStep').style.display = 'block';
+  setTimeout(() => document.getElementById('loginCodeInput')?.focus(), 300);
+}
+
+function hideLoginVerifyStep() {
+  document.getElementById('loginFormFields').style.display = 'block';
+  document.getElementById('loginVerifyStep').style.display = 'none';
+  clearLoginCode();
+  clearInterval(loginVerifyTimerInt);
+  document.getElementById('loginVerifyTimer').textContent = '';
+}
+
+async function sendLoginCode(user, email) {
+  if (typeof emailjs === 'undefined') {
+    console.error('EmailJS yüklenemedi');
+    return false;
+  }
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  loginVerifyCode = String(arr[0] % 900000 + 100000);
+  loginVerifyExpire = Date.now() + 5 * 60 * 1000;
+  loginVerifyAttempts = 0;
+
+  try {
+    await emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, {
+      email: email || user.email,
+      to_email: email || user.email,
+      to_name: user.displayName || 'Kullanıcı',
+      verification_code: loginVerifyCode,
+      email_subject: 'Giriş Doğrulama',
+      email_message: 'Cüzzy hesabına giriş yapmak için aşağıdaki 6 haneli doğrulama kodunu gir:'
+    });
+    startLoginVerifyTimer();
+    return true;
+  } catch (e) {
+    console.error('Login code send err:', e);
+    loginVerifyCode = null;
+    return false;
+  }
+}
+
+function startLoginVerifyTimer() {
+  clearInterval(loginVerifyTimerInt);
+  const update = () => {
+    const rem = Math.max(0, Math.floor((loginVerifyExpire - Date.now()) / 1000));
+    const m = Math.floor(rem / 60);
+    const s = rem % 60;
+    const el = document.getElementById('loginVerifyTimer');
+    if (!el) return;
+    if (rem > 0) {
+      el.textContent = `Kod geçerlilik: ${m}:${s.toString().padStart(2, '0')}`;
+      el.style.color = rem < 60 ? 'var(--error)' : '';
+    } else {
+      el.textContent = 'Kodun süresi doldu';
+      el.style.color = 'var(--error)';
+    }
+  };
+  update();
+  loginVerifyTimerInt = setInterval(update, 1000);
+}
+
+function lcodeInput() {
+  const el = document.getElementById('loginCodeInput');
+  if (!el) return;
+  el.value = el.value.replace(/[^0-9]/g, '');
+  if (el.value.length === 6) setTimeout(confirmLoginCode, 300);
+}
+
+function getLoginCode() {
+  return (document.getElementById('loginCodeInput')?.value || '').trim();
+}
+
+function clearLoginCode() {
+  const el = document.getElementById('loginCodeInput');
+  if (el) { el.value = ''; el.focus(); }
+}
+
+async function confirmLoginCode() {
+  const code = getLoginCode();
+  if (code.length !== 6) return toast('6 haneli kodu girin', 'error');
+  if (!loginVerifyCode) return toast('Kod bulunamadı. Tekrar gönderin.', 'error');
+  if (Date.now() > loginVerifyExpire) return toast('Kodun süresi doldu. Tekrar gönderin.', 'error');
+  if (loginVerifyAttempts >= 5) return toast('Çok fazla yanlış deneme', 'error');
+
+  if (code === loginVerifyCode) {
+    setFizzyState('loginVerifyBtn', 'success');
+    clearInterval(loginVerifyTimerInt);
+    loginVerifyPending = false;
+    loginVerifyCode = null;
+    toast('Giriş başarılı! Yönlendiriliyor...', 'success');
+    setTimeout(() => { window.location.href = 'app.html'; }, 1000);
+  } else {
+    loginVerifyAttempts++;
+    clearLoginCode();
+    const remaining = Math.max(0, 4 - loginVerifyAttempts);
+    toast(`Yanlış kod. ${remaining} hak kaldı.`, 'error');
+  }
+}
+
+async function resendLoginCode() {
+  if (!loginVerifyUser) return toast('Oturum bulunamadı', 'error');
+  const ok = await sendLoginCode(loginVerifyUser, loginVerifyUser.email);
+  if (ok) {
+    clearLoginCode();
+    toast('Yeni kod gönderildi', 'success');
+  } else {
+    toast('Gönderilemedi. Tekrar deneyin.', 'error');
+  }
+}
+
+async function cancelLoginVerify() {
+  clearInterval(loginVerifyTimerInt);
+  loginVerifyPending = false;
+  loginVerifyCode = null;
+  loginVerifyUser = null;
+  try { await auth.signOut(); } catch (e) {}
+  hideLoginVerifyStep();
+  setFizzyState('loginBtn', 'idle');
+}
+
+// Login enter ile
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+document.getElementById('regPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleRegister();
+});
+document.getElementById('forgotEmail').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendPasswordResetLink();
+});
+
+// ════════════════════════════════════════════════════════════════
+// PASSWORD RESET
+// ════════════════════════════════════════════════════════════════
+function mapResetError(err) {
+  const code = err?.code || '';
+  switch (code) {
+    case 'auth/user-not-found': return 'Bu e-posta ile kayıtlı hesap bulunamadı.';
+    case 'auth/invalid-email': return 'E-posta adresi geçersiz.';
+    case 'auth/too-many-requests': return 'Çok fazla deneme. 5-10 dakika bekleyin.';
+    case 'auth/network-request-failed': return 'İnternet bağlantısı hatası.';
+    case 'auth/missing-email': return 'Lütfen e-posta adresinizi girin.';
+    default: return 'Bağlantı gönderilemedi. Tekrar deneyin.';
+  }
+}
+
+async function sendPasswordResetLink() {
+  const emailInput = document.getElementById('forgotEmail');
+  const email = emailInput.value.trim().toLowerCase();
+  const result = document.getElementById('forgotResult');
+
+  if (!email) {
+    toast('E-posta girin', 'error');
+    emailInput.focus();
+    return;
+  }
+  if (!/\S+@\S+\.\S+/.test(email)) return toast('Geçerli bir e-posta girin', 'error');
+
+  setFizzyState('forgotSendBtn', 'loading');
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    setFizzyState('forgotSendBtn', 'success');
+    result.style.display = 'block';
+    result.style.background = 'rgba(52, 211, 153, 0.12)';
+    result.style.borderColor = 'rgba(52, 211, 153, 0.4)';
+    result.style.color = 'var(--success)';
+    result.innerHTML = `<strong>✓ Bağlantı gönderildi</strong><br><span style="font-size:0.82rem;opacity:0.9;display:block;margin-top:6px"><strong>${email}</strong> adresini kontrol et.</span>`;
+    toast('Bağlantı gönderildi', 'success');
+    setTimeout(() => setFizzyState('forgotSendBtn', 'idle'), 3000);
+  } catch (err) {
+    console.error('Reset err:', err);
+    setFizzyState('forgotSendBtn', 'idle');
+    const msg = mapResetError(err);
+    result.style.display = 'block';
+    result.style.background = 'rgba(248, 113, 113, 0.12)';
+    result.style.borderColor = 'rgba(248, 113, 113, 0.4)';
+    result.style.color = 'var(--error)';
+    result.innerHTML = `<strong>⚠ Hata</strong><br><span style="font-size:0.82rem;opacity:0.9">${msg}</span>`;
+    toast(msg, 'error');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// AUTO-REDIRECT EĞER ZATEN GİRİŞ YAPILMIŞSA
+// ════════════════════════════════════════════════════════════════
+let splashHideTimer = setTimeout(() => {
+  document.getElementById('splash').classList.add('hidden');
+}, 1200);
+
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    if (loginVerifyPending) {
+      // 2FA akışı devam ediyor — otomatik yönlendirme engellendi
+      clearTimeout(splashHideTimer);
+      setTimeout(() => document.getElementById('splash').classList.add('hidden'), 200);
+      return;
+    }
+    try {
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      if (userDoc.exists) {
+        clearTimeout(splashHideTimer);
+        window.location.href = 'app.html';
+        return;
+      }
+    } catch (e) {
+      console.warn('Auto-redirect check err:', e);
+    }
+  }
+  clearTimeout(splashHideTimer);
+  setTimeout(() => document.getElementById('splash').classList.add('hidden'), 200);
+});
+</script>
+
+</body>
+</html>
