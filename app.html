@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="tr" data-theme="aurora" data-wallpaper="aurora">
 <head>
 <meta charset="UTF-8">
@@ -6486,12 +6486,13 @@ const KVKK_SECTIONS = [
   { h: '2. İşlenen Kişisel Veriler', p: [
     `Kimlik ve iletişim verisi: Hesap oluştururken sağladığınız e-posta adresiniz ve görünen adınız.`,
     `Finansal veriler: Uygulamaya girdiğiniz gelir/gider işlemleri, kategoriler, bütçe ve tasarruf hedefleri, tekrarlayan ödemeler, abonelikler, borç kayıtları ile yatırım/portföy bilgileriniz.`,
-    `Banka ekstresi verileri: İsteğe bağlı olarak yüklediğiniz ekstre dosyalarından çıkarılan tarih, tutar ve açıklama gibi işlem bilgileri.`,
+    `Banka ekstresi verileri: İsteğe bağlı olarak yüklediğiniz ekstre dosyalarından yalnızca işlem tarihi, işlem tutarı ve kişisel veri içermeyen genel bir işlem türü etiketi (örneğin "Giden FAST", "Maaş", "Alışveriş") alınır. İşlem açıklamaları, üçüncü kişilere ait IBAN, isim gibi veriler içerebileceğinden alınmaz ve saklanmaz.`,
     `Teknik veriler: Oturum yönetimi ve güvenlik amacıyla kimlik doğrulama sağlayıcısı tarafından işlenen oturum, cihaz ve bağlantı bilgileri.`
   ]},
   { h: '3. Banka Ekstrelerinin İşlenmesi', p: [
-    `Yüklediğiniz banka ekstresi dosyaları (PDF/metin) yalnızca kendi tarayıcınızda, yani kendi cihazınızda çözümlenir. Ham ekstre dosyası sunucularımıza gönderilmez ve tarafımızca saklanmaz.`,
-    `Yalnızca çözümleme sonucu elde edilen ve sizin onayınızla eklenen işlem kayıtları hesabınıza kaydedilir; bu kayıtlar diğer finansal verilerinizle aynı şekilde saklanır.`
+    `Yüklediğiniz banka ekstresi dosyaları (PDF/metin) yalnızca kendi tarayıcınızda, yani kendi cihazınızda çözümlenir. Ham ekstre dosyası hiçbir şekilde sunucularımıza gönderilmez, tarafımızca saklanmaz ve bu işleme dair herhangi bir kayıt (log) tutulmaz.`,
+    `İşlem açıklamaları bilinçli olarak alınmaz; bunun yerine yalnızca tarih, tutar ve kişisel veri içermeyen bir işlem türü etiketi hesabınıza kaydedilir. Böylece ekstrede yer alabilecek üçüncü kişilere ait isim, IBAN, telefon veya referans numarası gibi veriler hiçbir zaman saklanmaz.`,
+    `Aynı ekstrenin yanlışlıkla iki kez yüklenmesini önlemek için, işleme ait geri döndürülemez teknik bir parmak izi (tek yönlü bir özet değeri) saklanabilir; bu değer okunabilir kişisel veri içermez ve içinden açıklama, isim veya IBAN geri elde edilemez.`
   ]},
   { h: '4. Kişisel Verilerin İşlenme Amaçları', p: [
     `Kişisel verileriniz; hesabınızın oluşturulması ve yönetilmesi, kişisel finans takibi hizmetinin sunulması, verilerinizin cihazlarınız arasında senkronize edilmesi, hizmet güvenliğinin sağlanması, yasal yükümlülüklerin yerine getirilmesi ve hizmetin iyileştirilmesi amaçlarıyla işlenir.`
