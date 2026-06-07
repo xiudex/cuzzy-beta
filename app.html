@@ -6477,7 +6477,7 @@ function _confirmCancel() {
 
 /* ═══ 24b. WHAT'S NEW POPUP ═══ */
 /* ═══ KVKK / GİZLİLİK ═══ */
-const KVKK_VERSION = '1.0';
+const KVKK_VERSION = '1.1';
 const KVKK_EFFECTIVE_DATE = 'Haziran 2026';
 const KVKK_TITLE = 'Cüzzy — KVKK Aydınlatma Metni ve Gizlilik Politikası';
 
@@ -6493,13 +6493,13 @@ const KVKK_SECTIONS = [
     `Kişisel verileriniz, veri sorumlusu sıfatıyla [Veri Sorumlusu Unvanı / Ad Soyad] tarafından işlenmektedir.`,
     `İletişim: [E-posta adresi] · [Açık adres] · [varsa KEP adresi]`
   ]},
-  { h: '2. İşlenen Kişisel Veriler', p: [
+  { h: '2. İşlenen Kişisel Veriler', changedIn: '1.1', p: [
     `Kimlik ve iletişim verisi: Hesap oluştururken sağladığınız e-posta adresiniz ve görünen adınız.`,
     `Finansal veriler: Uygulamaya girdiğiniz gelir/gider işlemleri, kategoriler, bütçe ve tasarruf hedefleri, tekrarlayan ödemeler, abonelikler, borç kayıtları ile yatırım/portföy bilgileriniz.`,
     `Banka ekstresi verileri: İsteğe bağlı olarak yüklediğiniz ekstre dosyalarından yalnızca işlem tarihi, işlem tutarı ve kişisel veri içermeyen genel bir işlem türü etiketi (örneğin "Giden FAST", "Maaş", "Alışveriş") alınır. İşlem açıklamaları, üçüncü kişilere ait IBAN, isim gibi veriler içerebileceğinden alınmaz ve saklanmaz.`,
     `Teknik veriler: Oturum yönetimi ve güvenlik amacıyla kimlik doğrulama sağlayıcısı tarafından işlenen oturum, cihaz ve bağlantı bilgileri.`
   ]},
-  { h: '3. Banka Ekstrelerinin İşlenmesi', p: [
+  { h: '3. Banka Ekstrelerinin İşlenmesi', changedIn: '1.1', p: [
     `Yüklediğiniz banka ekstresi dosyaları (PDF/metin) yalnızca kendi tarayıcınızda, yani kendi cihazınızda çözümlenir. Ham ekstre dosyası hiçbir şekilde sunucularımıza gönderilmez, tarafımızca saklanmaz ve bu işleme dair herhangi bir kayıt (log) tutulmaz.`,
     `İşlem açıklamaları bilinçli olarak alınmaz; bunun yerine yalnızca tarih, tutar ve kişisel veri içermeyen bir işlem türü etiketi hesabınıza kaydedilir. Böylece ekstrede yer alabilecek üçüncü kişilere ait isim, IBAN, telefon veya referans numarası gibi veriler hiçbir zaman saklanmaz.`,
     `Aynı ekstrenin yanlışlıkla iki kez yüklenmesini önlemek için, işleme ait geri döndürülemez teknik bir parmak izi (tek yönlü bir özet değeri) saklanabilir; bu değer okunabilir kişisel veri içermez ve içinden açıklama, isim veya IBAN geri elde edilemez.`
