@@ -700,6 +700,10 @@ body.plan-none .ad-placeholder { display: none !important; }
 .kvkk-p { font-size: 0.82rem; color: var(--text-soft); line-height: 1.65; margin: 0 0 8px; }
 .kvkk-gate-foot { padding: 14px 26px 18px; border-top: 1px solid var(--glass-border); background: var(--glass); flex-shrink: 0; }
 .kvkk-scroll-hint { font-size: 0.74rem; color: var(--accent); text-align: center; margin-bottom: 10px; }
+.kvkk-update-banner { margin-top: 12px; padding: 10px 12px; border-radius: 11px; background: rgba(245,158,11,0.14); border: 1px solid rgba(245,158,11,0.42); color: var(--text); font-size: 0.78rem; line-height: 1.5; }
+.kvkk-sec.kvkk-changed { background: rgba(245,158,11,0.10); border-left: 3px solid #f59e0b; border-radius: 8px; padding: 8px 12px; margin: 12px -6px; }
+.kvkk-sec.kvkk-changed .kvkk-h { text-decoration: underline; text-decoration-color: #f59e0b; text-underline-offset: 3px; }
+.kvkk-badge { display: inline-block; font-size: 0.62rem; font-weight: 800; color: #7c4a03; background: #f59e0b; border-radius: 999px; padding: 2px 8px; vertical-align: middle; margin-left: 6px; }
 .multi-head { display: grid; grid-template-columns: 92px 1fr 1.4fr 120px 140px 34px; gap: 8px; font-size: 0.7rem; color: var(--text-muted); font-weight: 700; margin-bottom: 6px; padding: 0 2px; }
 .multi-row { display: grid; grid-template-columns: 92px 1fr 1.4fr 120px 140px 34px; gap: 8px; align-items: center; margin-bottom: 8px; }
 .multi-row select, .multi-row input { padding: 8px 9px; border-radius: 9px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); font-size: 0.82rem; width: 100%; box-sizing: border-box; }
@@ -2182,8 +2186,9 @@ body.plan-none .ad-placeholder { display: none !important; }
 <div class="wn-overlay" id="kvkkGateOverlay">
   <div class="kvkk-gate-box">
     <div class="kvkk-gate-head">
-      <div class="kvkk-gate-title">📄 KVKK Aydınlatma Metni</div>
-      <div class="kvkk-gate-sub">Devam etmeden önce lütfen aşağıdaki metni okuyun. Metni sonuna kadar kaydırınca onay kutusu etkinleşir.</div>
+      <div class="kvkk-gate-title" id="kvkkGateTitle">📄 KVKK Aydınlatma Metni</div>
+      <div class="kvkk-gate-sub" id="kvkkGateSub">Devam etmeden önce lütfen aşağıdaki metni okuyun. Metni sonuna kadar kaydırınca onay kutusu etkinleşir.</div>
+      <div class="kvkk-update-banner" id="kvkkUpdateBanner" style="display:none">📝 Metin güncellendi — aşağıda <b>Güncellendi</b> etiketli ve altı çizili bölümleri inceleyin.</div>
     </div>
     <div class="kvkk-scroll" id="kvkkGateScroll">
       <div id="kvkkGateText"></div>
@@ -6475,6 +6480,10 @@ const KVKK_VERSION = '1.0';
 const KVKK_EFFECTIVE_DATE = 'Haziran 2026';
 const KVKK_TITLE = 'Cüzzy — KVKK Aydınlatma Metni ve Gizlilik Politikası';
 
+// METNİ GÜNCELLERKEN: değişen bölüme `changedIn: '<yeni sürüm>'` ekle ve KVKK_VERSION'ı
+// o sürüme yükselt. Önceki sürümü onaylamış kullanıcılar açılışta "Güncellendi" uyarısı
+// görür, değişen bölümler altı çizili/vurgulu işaretlenir ve yeniden onay istenir.
+// Örn: { h: '3. ...', changedIn: '1.1', p: [ ... ] }
 const KVKK_SECTIONS = [
   { h: 'Giriş', p: [
     `Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında, Cüzzy ("Uygulama") üzerinden işlenen kişisel verilerinize ilişkin olarak sizi bilgilendirmek amacıyla hazırlanmıştır. Uygulamayı kullanarak bu metinde açıklanan veri işleme faaliyetlerini okuduğunuzu ve anladığınızı kabul edersiniz.`
@@ -6540,10 +6549,28 @@ const KVKK_SECTIONS = [
   ]}
 ];
 
-function kvkkHtml() {
-  return KVKK_SECTIONS.map(s =>
-    `<h4 class="kvkk-h">${s.h}</h4>` + s.p.map(par => `<p class="kvkk-p">${par}</p>`).join('')
-  ).join('');
+/* Sürüm karşılaştırma: cmpVer('1.2','1.1') → 1, eşit → 0, küçük → -1 */
+function cmpVer(a, b) {
+  const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0);
+    if (d !== 0) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+/* priorVersion verilirse (güncelleme akışı), changedIn'i kullanıcının onayladığı
+   sürümden YENİ olan bölümler "Güncellendi" rozeti + vurgu + altı çizili gösterilir.
+   İlk onayda priorVersion boş bırakılır → hiçbir vurgu olmaz. */
+function kvkkHtml(priorVersion) {
+  return KVKK_SECTIONS.map(s => {
+    const changed = priorVersion && s.changedIn && cmpVer(s.changedIn, priorVersion) > 0;
+    const badge = changed ? ' <span class="kvkk-badge">Güncellendi</span>' : '';
+    return `<div class="kvkk-sec${changed ? ' kvkk-changed' : ''}"><h4 class="kvkk-h">${s.h}${badge}</h4>` +
+           s.p.map(par => `<p class="kvkk-p">${par}</p>`).join('') + `</div>`;
+  }).join('');
 }
 function _kvkkStrip(s) { const d = document.createElement('div'); d.innerHTML = s; return d.textContent || ''; }
 function kvkkPlainText() {
@@ -6570,8 +6597,19 @@ let _kvkkScrolled = false;
 function showKvkkGate(onAccept) {
   _kvkkOnAccept = (typeof onAccept === 'function') ? onAccept : null;
   _kvkkScrolled = false;
+  // Daha önce eski bir sürümü onaylamışsa → güncelleme akışı (değişen bölümler vurgulanır)
+  const prior = S.kvkkConsent;
+  const isUpdate = !!prior && prior !== KVKK_VERSION;
   const body = document.getElementById('kvkkGateText');
-  if (body) body.innerHTML = kvkkHtml();
+  if (body) body.innerHTML = kvkkHtml(isUpdate ? prior : null);
+  const titleEl = document.getElementById('kvkkGateTitle');
+  const subEl = document.getElementById('kvkkGateSub');
+  const banner = document.getElementById('kvkkUpdateBanner');
+  if (titleEl) titleEl.textContent = isUpdate ? '📝 KVKK Metni Güncellendi' : '📄 KVKK Aydınlatma Metni';
+  if (subEl) subEl.textContent = isUpdate
+    ? 'Aydınlatma metnimiz güncellendi. Değişen bölümler aşağıda işaretlendi; lütfen gözden geçirip yeniden onaylayın.'
+    : 'Devam etmeden önce lütfen aşağıdaki metni okuyun. Metni sonuna kadar kaydırınca onay kutusu etkinleşir.';
+  if (banner) banner.style.display = isUpdate ? 'block' : 'none';
   const cb = document.getElementById('kvkkGateCheck');
   const btn = document.getElementById('kvkkGateBtn');
   const hint = document.getElementById('kvkkScrollHint');
