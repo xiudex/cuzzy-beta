@@ -282,6 +282,15 @@ aside.right-panel { position: sticky; top: 100px; height: fit-content; max-heigh
 .nav-drawer-item { text-align: left; padding: 13px 16px; border-radius: 13px; border: none; background: transparent; color: var(--text-soft); font-family: inherit; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
 .nav-drawer-item:hover { background: var(--glass); color: var(--text); }
 .nav-drawer-item.active { background: var(--accent-soft); color: var(--text); border: 1px solid var(--accent-strong); }
+.survey-btn { flex-shrink: 0; gap: 5px; }
+.survey-btn .survey-btn-label { display: inline; }
+@media (max-width: 900px) { .survey-btn .survey-btn-label { display: none; } .survey-btn { padding: 7px 10px; } }
+.survey-rating { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
+.survey-rating button { padding: 0; height: 38px; border-radius: 9px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text-soft); font-family: inherit; font-size: 0.84rem; font-weight: 700; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s; }
+.survey-rating button:hover { border-color: var(--accent-strong); color: var(--text); }
+.survey-rating button.sel { background: var(--accent); border-color: var(--accent); color: #07101a; }
+.survey-scale { display: flex; justify-content: space-between; font-size: 0.66rem; color: var(--text-muted); margin-top: 5px; }
+@media (max-width: 520px) { .survey-rating { grid-template-columns: repeat(5, 1fr); } }
 
 /* Ticker — yatay kaydırılabilir takip çubuğu */
 .ticker-wrap { position: relative; max-width: 280px; padding: 4px 12px; border-radius: 999px; background: var(--input-bg); border: 1px solid var(--glass-border); cursor: pointer; overflow: hidden; transition: border-color 0.3s ease, transform 0.3s ease; }
@@ -1105,6 +1114,7 @@ body.plan-none .ad-placeholder { display: none !important; }
           </div>
         </div>
       </div>
+      <button class="btn btn-sm survey-btn" id="surveyNavBtn" onclick="openSurvey()" title="Memnuniyet anketi"><span>📋</span><span class="survey-btn-label">Ankete katıl</span></button>
       <button class="topnav-avatar" onclick="showModal('modalProfile')" title="Profil ve hesap">
         <span class="topnav-avatar-text" id="navAvatarText">K</span>
         <span class="sync-pulse" id="syncPulse" title="Senkron"></span>
@@ -2159,6 +2169,29 @@ body.plan-none .ad-placeholder { display: none !important; }
   </div>
 </div>
 
+<!-- MEMNUNİYET ANKETİ MODALI -->
+<div class="modal-bg" id="modalSurvey" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title">📋 Memnuniyet Anketi</div>
+    <div id="surveyProgress" class="text-muted" style="font-size:0.74rem;font-weight:700;letter-spacing:0.04em;margin-bottom:8px"></div>
+    <div id="surveyQText" style="font-size:1rem;font-weight:700;color:var(--text);line-height:1.5;margin-bottom:16px"></div>
+    <div class="survey-rating" id="surveyRating"></div>
+    <div class="survey-scale"><span>1 · Çok kötü</span><span>10 · Mükemmel</span></div>
+    <div class="field" style="margin-top:16px">
+      <label>Özgür fikrinizi belirtin (opsiyonel)</label>
+      <textarea id="surveyText" rows="3" maxlength="500" placeholder="Bu konuda görüşünü yazabilirsin..." style="resize:vertical"></textarea>
+    </div>
+    <div class="row-flex" style="margin-top:18px;justify-content:space-between">
+      <button class="btn btn-ghost" id="surveyPrev" onclick="surveyPrev()">← Geri</button>
+      <button class="btn btn-primary" id="surveyNext" onclick="surveyNext()">İleri →</button>
+    </div>
+    <p class="text-muted" style="font-size:0.72rem;line-height:1.6;margin-top:16px;text-align:center">
+      Göndermek istediğiniz anket yalnızca destek bölümüne iletilir. Hesap, işlem veya finansal verilerinizin hiçbiri bu ankete eklenmez; herhangi bir veriniz başka bir yere aktarılmaz.
+    </p>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════════════════════════════
      ONBOARDING TUR (10 adım)
      ═══════════════════════════════════════════════════════════════════ -->
@@ -2372,7 +2405,8 @@ const DEFAULT_STATE = {
   notifications: { income: true, expense: true, goals: true },
   emailVerified: true, tourCompleted: false,
   whatsNewSeen: '', hideBetaNotice: false, kvkkConsent: '',
-  appNotifs: [], notifSummary: { day: '', week: '', month: '' }
+  appNotifs: [], notifSummary: { day: '', week: '', month: '' },
+  surveyCompleted: false
 };
 
 let S = JSON.parse(JSON.stringify(DEFAULT_STATE));
@@ -2684,7 +2718,8 @@ function normalizeState(raw) {
       day: validateString(src.notifSummary?.day, 10),
       week: validateString(src.notifSummary?.week, 10),
       month: validateString(src.notifSummary?.month, 10)
-    }
+    },
+    surveyCompleted: src.surveyCompleted === true
   };
 }
 
@@ -4614,6 +4649,8 @@ function renderAll() {
   updateAvatar();
   applyPlanRestrictions();
   updateNotifBadge();
+  const _sb = document.getElementById('surveyNavBtn');
+  if (_sb) _sb.style.display = S.surveyCompleted ? 'none' : '';
 }
 
 /* ═══ Sağ panel widget'ları ═══ */
@@ -6607,6 +6644,138 @@ async function sendSupportEmail() {
   }
 }
 
+/* ═══ MEMNUNİYET ANKETİ ═══ */
+const SURVEY_QUESTIONS = [
+  { id: 'genel',    text: 'Cüzzy\'den genel memnuniyetini nasıl puanlarsın?' },
+  { id: 'kullanim', text: 'Uygulamanın kullanımı senin için ne kadar kolay?' },
+  { id: 'tasarim',  text: 'Tasarım ve görünümü ne kadar beğeniyorsun?' },
+  { id: 'ozellik',  text: 'Sunulan özellikler ihtiyaçlarını ne kadar karşılıyor?' },
+  { id: 'hiz',      text: 'Uygulamanın hızını ve akıcılığını nasıl buluyorsun?' },
+  { id: 'tavsiye',  text: 'Cüzzy\'yi bir arkadaşına tavsiye etme olasılığın nedir?' }
+];
+let _surveyIdx = 0;
+let _surveyAnswers = {};
+
+function openSurvey() {
+  _surveyIdx = 0;
+  _surveyAnswers = {};
+  SURVEY_QUESTIONS.forEach(q => { _surveyAnswers[q.id] = { rating: null, text: '' }; });
+  showModal('modalSurvey');
+  renderSurveyStep();
+}
+
+function _surveySaveCurrent() {
+  const q = SURVEY_QUESTIONS[_surveyIdx];
+  if (!q) return;
+  const txt = document.getElementById('surveyText');
+  if (txt) _surveyAnswers[q.id].text = txt.value;
+}
+
+function renderSurveyStep() {
+  const q = SURVEY_QUESTIONS[_surveyIdx];
+  const total = SURVEY_QUESTIONS.length;
+  const prog = document.getElementById('surveyProgress');
+  const qtext = document.getElementById('surveyQText');
+  if (prog) prog.textContent = `Soru ${_surveyIdx + 1} / ${total}`;
+  if (qtext) qtext.textContent = q.text;
+
+  const rc = document.getElementById('surveyRating');
+  if (rc) {
+    rc.innerHTML = '';
+    const sel = _surveyAnswers[q.id].rating;
+    for (let i = 1; i <= 10; i++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = i;
+      if (sel === i) b.classList.add('sel');
+      b.onclick = () => surveySetRating(i);
+      rc.appendChild(b);
+    }
+  }
+  const txt = document.getElementById('surveyText');
+  if (txt) txt.value = _surveyAnswers[q.id].text || '';
+
+  const prev = document.getElementById('surveyPrev');
+  const next = document.getElementById('surveyNext');
+  if (prev) prev.style.visibility = _surveyIdx === 0 ? 'hidden' : 'visible';
+  if (next) next.textContent = _surveyIdx === total - 1 ? '✓ Gönder' : 'İleri →';
+}
+
+function surveySetRating(n) {
+  const q = SURVEY_QUESTIONS[_surveyIdx];
+  _surveyAnswers[q.id].rating = n;
+  const rc = document.getElementById('surveyRating');
+  if (rc) [...rc.children].forEach((b, idx) => b.classList.toggle('sel', idx + 1 === n));
+}
+
+function surveyPrev() {
+  _surveySaveCurrent();
+  if (_surveyIdx > 0) { _surveyIdx--; renderSurveyStep(); }
+}
+
+function surveyNext() {
+  _surveySaveCurrent();
+  if (_surveyIdx < SURVEY_QUESTIONS.length - 1) { _surveyIdx++; renderSurveyStep(); }
+  else submitSurvey();
+}
+
+async function submitSurvey() {
+  _surveySaveCurrent();
+  const answered = SURVEY_QUESTIONS.some(q =>
+    _surveyAnswers[q.id].rating != null || (_surveyAnswers[q.id].text || '').trim());
+  if (!answered) return toast('Lütfen en az bir soruyu yanıtla', 't-err');
+
+  const btn = document.getElementById('surveyNext');
+  const prevTxt = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Gönderiliyor…'; }
+
+  const lines = [];
+  lines.push('CÜZZY MEMNUNİYET ANKETİ');
+  lines.push('Gönderen: ' + (S.profile?.name || 'Kullanıcı') + ' (' + (currentUser?.email || '?') + ')');
+  lines.push('Tarih: ' + new Date().toLocaleString('tr-TR'));
+  lines.push('');
+  SURVEY_QUESTIONS.forEach((q, i) => {
+    const a = _surveyAnswers[q.id];
+    lines.push((i + 1) + '. ' + q.text);
+    lines.push('   Puan: ' + (a.rating != null ? a.rating + '/10' : '—'));
+    lines.push('   Yorum: ' + ((a.text || '').trim() || '—'));
+    lines.push('');
+  });
+  const body = lines.join('\n');
+
+  const params = {
+    from_name: S.profile?.name || 'Cüzzy Kullanıcısı',
+    reply_to: currentUser?.email || 'bilinmiyor',
+    category: 'Memnuniyet Anketi',
+    subject_line: 'Memnuniyet Anketi',
+    message_body: body,
+    to_email: 'cuzzyapp@gmail.com',
+    to_name: 'Cüzzy Destek',
+    email: 'cuzzyapp@gmail.com',
+    email_subject: '[Cüzzy Anket] Memnuniyet Anketi',
+    email_message: body
+  };
+
+  try {
+    if (typeof emailjs === 'undefined') throw new Error('emailjs_missing');
+    await emailjs.send(EMAILJS_CONFIG.serviceId, EMAILJS_CONFIG.templateId, params);
+    S.surveyCompleted = true;
+    save();
+    const _sb = document.getElementById('surveyNavBtn');
+    if (_sb) _sb.style.display = 'none';
+    toast('Anketin gönderildi, teşekkürler! 🙏', 't-ok');
+    closeModal();
+  } catch {
+    const mailtoLink = 'mailto:cuzzyapp@gmail.com?subject=' +
+      encodeURIComponent('[Cüzzy Anket] Memnuniyet Anketi') + '&body=' + encodeURIComponent(body);
+    window.open(mailtoLink, '_blank');
+    toast('E-posta uygulaması açılıyor…', 't-info');
+    closeModal();
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = prevTxt; }
+  }
+}
+
 /* ═══ EVRENSEL ONAY MODALI ═══ */
 let _confirmCallback = null;
 function showConfirm({ title = 'Emin misin?', msg = '', danger = false, onOk }) {
@@ -6970,7 +7139,7 @@ function _wnGoto(idx) {
   _wnRenderDots();
   const btn = document.getElementById('wnNext');
   const skip = document.getElementById('wnSkip');
-  if (btn) btn.textContent = idx === WN_SLIDE_COUNT - 1 ? 'Kapat' : 'Devam →';
+  if (btn) btn.textContent = idx === WN_SLIDE_COUNT - 1 ? 'Kapat ✓' : 'Devam →';
   if (skip) skip.style.visibility = idx === WN_SLIDE_COUNT - 1 ? 'hidden' : 'visible';
 }
 
